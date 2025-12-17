@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Toolbar } from './reductor/Toolbar';
-import { ActionBar } from './reductor/ActionBar';
-import { PropertiesPanel } from './reductor/PropertiesPanel';
+import { Toolbar } from '../../components/Toolbar';
+import { ActionBar } from '../../components/ActionBar';
+import { PropertiesPanel } from '../../components/PropertiesPanel';
 import { hexToHsl, hslToHex } from '../../components/colorUtils';
 
 export default function Reductor({ children, whiteboardRef }: { children: React.ReactNode; whiteboardRef: React.RefObject<any> }){
