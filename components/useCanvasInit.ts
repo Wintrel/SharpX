@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Canvas as FabricCanvas, Point, IEvent } from 'fabric';
+import { Canvas as FabricCanvas, Point, TEvent } from 'fabric';
 import { Tool } from './types';
 
 interface UseCanvasInitProps {
@@ -72,7 +72,7 @@ export const useCanvasInit = ({
              });
         };
 
-        const handleSelection = (e: Partial<IEvent>) => {
+        const handleSelection = (e: Partial<TEvent>) => {
             // @ts-ignore
            const obj = e.selected ? e.selected[0] : null;
            if (onSelectionChange) onSelectionChange(obj);
