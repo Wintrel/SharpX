@@ -46,12 +46,12 @@ export const useCanvasInit = ({
         if (initialData) {
             canvas.loadFromJSON(initialData, () => {
                 canvas.renderAll();
-                const initialJson = JSON.stringify(canvas.toJSON(['id', 'backgroundColor']));
+                const initialJson = JSON.stringify(canvas.toJSON());
                 setHistory([initialJson]);
                 updateLayers(canvas);
             });
         } else {
-            setHistory([JSON.stringify(canvas.toJSON(['id', 'backgroundColor']))]);
+            setHistory([JSON.stringify(canvas.toJSON())]);
         }
 
         // Cleanup
@@ -123,8 +123,10 @@ export const useCanvasInit = ({
             if (selectedTool === 'hand' || (evt as MouseEvent).buttons === 4) {
                 isPanning.current = true;
                 fabricCanvas.selection = false;
-                lastPosX.current = evt.clientX;
-                lastPosY.current = evt.clientY;
+                const clientX = (evt as MouseEvent).clientX || (evt as TouchEvent).touches?.[0]?.clientX || 0;
+                const clientY = (evt as MouseEvent).clientY || (evt as TouchEvent).touches?.[0]?.clientY || 0;
+                lastPosX.current = clientX;
+                lastPosY.current = clientY;
                 fabricCanvas.defaultCursor = 'grabbing';
             }
         });
@@ -135,11 +137,13 @@ export const useCanvasInit = ({
                 const e = opt.e;
                 const vpt = fabricCanvas.viewportTransform;
                 if(vpt) {
-                    vpt[4] += e.clientX - lastPosX.current;
-                    vpt[5] += e.clientY - lastPosY.current;
+                    const clientX = (e as MouseEvent).clientX || (e as TouchEvent).touches?.[0]?.clientX || 0;
+                    const clientY = (e as MouseEvent).clientY || (e as TouchEvent).touches?.[0]?.clientY || 0;
+                    vpt[4] += clientX - lastPosX.current;
+                    vpt[5] += clientY - lastPosY.current;
                     fabricCanvas.requestRenderAll();
-                    lastPosX.current = e.clientX;
-                    lastPosY.current = e.clientY;
+                    lastPosX.current = clientX;
+                    lastPosY.current = clientY;
                 }
             }
         });

@@ -31,7 +31,7 @@ export const useDrawing = (
                 left: pointer.x, top: pointer.y,
                 fill: '#e4e4e7', stroke: '#18181b', strokeWidth: 2,
                 selectable: false, evented: false, 
-                originX: 'left', originY: 'top',
+                originX: 'left' as const, originY: 'top' as const,
             };
 
             if (selectedTool === 'rectangle' || selectedTool === 'square') shape = new Rect({ ...commonProps, width: 0, height: 0 });

@@ -9,7 +9,7 @@ export const useHistory = (onSave?: (data: any) => void) => {
     const saveState = useCallback((canvas: FabricCanvas) => {
         if (isHistoryLocked.current) return;
         
-        const jsonObj = canvas.toJSON(['id', 'lockMovementX', 'lockMovementY', 'selectable', 'evented', 'name', 'backgroundColor']);
+        const jsonObj = canvas.toJSON();
         const jsonString = JSON.stringify(jsonObj);
         
         setHistory((prev) => {
