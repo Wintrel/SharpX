@@ -14,12 +14,13 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ onSelectionChange
     const [selectedTool, setSelectedTool] = useState<Tool>('select');
     const { history, setHistory, saveState, undo } = useHistory(onSave);
 
-    // 2. Helpers (updateLayers depends on props, so it stays here or gets passed down)
+    // 2. Helpers
     const updateLayers = useCallback((canvas: FabricCanvas) => {
         if (!onLayerChange) return;
         const objs = canvas.getObjects();
         const layers = objs.map((obj, i) => ({
-            id: i.toString(),
+            // @ts-ignore
+            id: obj.id || i.toString(), 
             // @ts-ignore
             name: obj.id || `${obj.type} ${i + 1}`, 
             type: obj.type,
@@ -56,7 +57,7 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ onSelectionChange
             fabricCanvas.requestRenderAll();
         },
         undo: () => undo(fabricCanvas!, updateLayers),
-        ...actions
+        ...actions 
     }));
 
     // 7. Keyboard Shortcuts
@@ -64,7 +65,6 @@ export const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ onSelectionChange
         const handleKeyDown = (e: KeyboardEvent) => {
             if (!fabricCanvas) return;
             if ((e.key === 'Delete' || e.key === 'Backspace')) {
-                // Prevent deleting if text editing is active (handled inside deleteSelected normally, but good safely check)
                 actions.deleteSelected();
             }
             if ((e.ctrlKey || e.metaKey) && e.key === 'z') {

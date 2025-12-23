@@ -6,7 +6,12 @@ import {
     signOut, 
     User,
     createUserWithEmailAndPassword,
-    signInWithEmailAndPassword
+    signInWithEmailAndPassword,
+    updatePassword,
+    updateEmail,
+    linkWithPopup,
+    unlink,
+    sendEmailVerification
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -34,7 +39,6 @@ export const googleProvider = new GoogleAuthProvider();
 const appId = 'canvas-app-default'; 
 
 // --- Helper: Sanitize Data for Firestore ---
-// Firestore rejects 'undefined', so we replace it with null or remove the key.
 const sanitizeData = (data: any): any => {
     if (data === undefined) return null;
     if (data === null) return null;
@@ -48,8 +52,6 @@ const sanitizeData = (data: any): any => {
         for (const key in data) {
             if (Object.prototype.hasOwnProperty.call(data, key)) {
                 const val = sanitizeData(data[key]);
-                // Optional: You can choose to skip keys with null values if you want to save space
-                // if (val !== null) newObj[key] = val;
                 newObj[key] = val;
             }
         }
@@ -67,6 +69,10 @@ const handleAuthError = (error: any) => {
         const msg = "Network request failed. This is often caused by AdBlockers blocking Firebase. Please disable them for this site.";
         console.error(msg);
         alert(msg);
+    }
+    // Handle "Requires Recent Login" specifically
+    if (error.code === 'auth/requires-recent-login') {
+        throw new Error("Security check: Please log out and log back in to perform this sensitive action.");
     }
     throw error;
 };
@@ -103,6 +109,41 @@ export const logout = async () => {
     }
 };
 
+// --- Account Management ---
+
+export const updateUserPassword = async (user: User, newPass: string) => {
+    try {
+        await updatePassword(user, newPass);
+    } catch (error) {
+        handleAuthError(error);
+    }
+};
+
+export const updateUserEmail = async (user: User, newEmail: string) => {
+    try {
+        await updateEmail(user, newEmail);
+        await sendEmailVerification(user); // Optional but recommended
+    } catch (error) {
+        handleAuthError(error);
+    }
+};
+
+export const linkGoogleAccount = async (user: User) => {
+    try {
+        await linkWithPopup(user, googleProvider);
+    } catch (error) {
+        handleAuthError(error);
+    }
+};
+
+export const unlinkGoogleAccount = async (user: User) => {
+    try {
+        await unlink(user, 'google.com');
+    } catch (error) {
+        handleAuthError(error);
+    }
+};
+
 // --- Database Helpers ---
 
 export const saveCanvasData = async (userId: string, data: any) => {
@@ -117,10 +158,7 @@ export const saveCanvasData = async (userId: string, data: any) => {
     }
 
     try {
-        // Sanitize data before sending to Firestore to prevent "Unsupported field value: undefined"
         const cleanData = sanitizeData(data);
-
-        // Path: /artifacts/{appId}/users/{userId}/data/canvas
         const canvasRef = doc(db, 'artifacts', appId, 'users', userId, 'data', 'canvas');
         
         await setDoc(canvasRef, { 

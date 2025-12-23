@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Canvas as FabricCanvas, Rect, Circle, Triangle, Line, TPointerEventInfo } from 'fabric';
+import { Canvas as FabricCanvas, Rect, Circle, Triangle, Line, Textbox, TPointerEventInfo } from 'fabric';
 import { Tool, TPointerEvent } from './types';
 import { generateId } from './utils';
 
@@ -18,7 +18,7 @@ export const useDrawing = (
         if (!fabricCanvas) return;
 
         const handleMouseDown = (opt: TPointerEventInfo<TPointerEvent>) => {
-            const drawingTools = ['rectangle', 'square', 'circle', 'triangle', 'line'];
+            const drawingTools = ['rectangle', 'square', 'circle', 'triangle', 'line', 'text'];
             if(!drawingTools.includes(selectedTool)) return;
 
             isDrawing.current = true;
@@ -27,6 +27,7 @@ export const useDrawing = (
             fabricCanvas.discardActiveObject();
 
             let shape: Rect | Circle | Triangle | Line | null = null;
+            
             const commonProps = {
                 left: pointer.x, top: pointer.y,
                 fill: '#e4e4e7', stroke: '#18181b', strokeWidth: 2,
@@ -34,10 +35,29 @@ export const useDrawing = (
                 originX: 'left' as const, originY: 'top' as const,
             };
 
-            if (selectedTool === 'rectangle' || selectedTool === 'square') shape = new Rect({ ...commonProps, width: 0, height: 0 });
-            else if (selectedTool === 'circle') shape = new Circle({ ...commonProps, radius: 0 });
-            else if (selectedTool === 'triangle') shape = new Triangle({ ...commonProps, width: 0, height: 0 });
-            else if (selectedTool === 'line') shape = new Line([pointer.x, pointer.y, pointer.x, pointer.y], { ...commonProps, fill: undefined });
+            if (selectedTool === 'rectangle' || selectedTool === 'square') {
+                shape = new Rect({ ...commonProps, width: 0, height: 0 });
+            }
+            else if (selectedTool === 'circle') {
+                shape = new Circle({ ...commonProps, radius: 0 });
+            }
+            else if (selectedTool === 'triangle') {
+                shape = new Triangle({ ...commonProps, width: 0, height: 0 });
+            }
+            else if (selectedTool === 'line') {
+                shape = new Line([pointer.x, pointer.y, pointer.x, pointer.y], { ...commonProps, fill: undefined });
+            }
+            else if (selectedTool === 'text') {
+                shape = new Rect({ 
+                    ...commonProps, 
+                    fill: 'transparent', 
+                    stroke: '#3b82f6', 
+                    strokeWidth: 1,
+                    strokeDashArray: [4, 4], 
+                    width: 0, 
+                    height: 0 
+                });
+            }
 
             if (shape) {
                 // @ts-ignore
@@ -52,7 +72,7 @@ export const useDrawing = (
             const pointer = fabricCanvas.getPointer(opt.e);
             const {x:startX, y:startY} = startPoint.current;
             
-            if (['rectangle', 'square', 'triangle', 'circle'].includes(selectedTool)){
+            if (['rectangle', 'square', 'triangle', 'circle', 'text'].includes(selectedTool)){
                 let width = Math.abs(pointer.x - startX);
                 let height = Math.abs(pointer.y - startY);
                 let left = Math.min(pointer.x, startX);
@@ -80,13 +100,45 @@ export const useDrawing = (
         const handleMouseUp = () => {
             if (isDrawing.current && currentShape.current) {
                 currentShape.current.setCoords();
-                if ((currentShape.current.width || 0) < 5 && (currentShape.current.height || 0) < 5 && selectedTool !== 'line') {
-                    fabricCanvas.remove(currentShape.current);
-                } else {
+
+                if (selectedTool === 'text') {
+                    const { left, top, width } = currentShape.current;
+                    fabricCanvas.remove(currentShape.current); 
+
+                    const isClick = (width || 0) < 10;
+                    const boxWidth = isClick ? 200 : width;
+
+                    const textbox = new Textbox('Type here', {
+                        left: left,
+                        top: top,
+                        width: boxWidth,
+                        fontSize: 32,
+                        fontFamily: 'Inter, sans-serif',
+                        fill: '#333',
+                        splitByGrapheme: true,
+                        // IMPT: Lock uniform scaling to prevent distortion
+                        lockUniScaling: true 
+                    });
+                    
+                    // @ts-ignore
+                    textbox.id = generateId('Text', fabricCanvas);
+                    fabricCanvas.add(textbox);
+                    fabricCanvas.setActiveObject(textbox);
+                    textbox.enterEditing();
+                    textbox.selectAll();
+
                     saveState(fabricCanvas);
                     updateLayers(fabricCanvas);
+                    setSelectedTool('select'); 
+                } 
+                else {
+                    if ((currentShape.current.width || 0) < 5 && (currentShape.current.height || 0) < 5 && selectedTool !== 'line') {
+                        fabricCanvas.remove(currentShape.current);
+                    } else {
+                        saveState(fabricCanvas);
+                        updateLayers(fabricCanvas);
+                    }
                 }
-                setSelectedTool('select'); 
             }
             isDrawing.current = false;
             currentShape.current = null;

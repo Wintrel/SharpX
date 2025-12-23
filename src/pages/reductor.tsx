@@ -129,22 +129,19 @@ export default function Reductor({ children, whiteboardRef }: { children: React.
         if (/^#[0-9A-F]{6}$/i.test(val)) handleColorSelect(val);
     };
 
-    const handleToolClick = (tool: string) => {
-        setActiveTool(tool);
-        if (tool === 'text') {
-            whiteboardRef.current?.addText();
-            setActiveTool('select');
-        } else {
-            whiteboardRef.current?.setTool(tool);
-        }
-    };
+        const handleToolClick = (tool: string) => {
+            setActiveTool(tool);
+            whiteboardRef.current?.setTool(tool as any); 
+        };
 
-    const handleLayerAction = (id: string, action: 'visible'|'locked') => {
-        const index = layers.findIndex(l => l.id === id);
-        if (index === -1) return;
-        if (action === 'visible') whiteboardRef.current?.toggleLayerVisibility(index);
-        if (action === 'locked') whiteboardRef.current?.toggleLayerLock(index);
-    };
+        const handleLayerAction = (id: string, action: 'visible' | 'locked' | 'delete') => {
+            const index = layers.findIndex(l => l.id === id);
+            if (index === -1) return;
+            
+            if (action === 'visible') whiteboardRef.current?.toggleLayerVisibility(index);
+            else if (action === 'locked') whiteboardRef.current?.toggleLayerLock(index);
+            else if (action === 'delete') whiteboardRef.current?.deleteLayer(id);
+        };
 
     const handleLayerDragDrop = (dragIndex: number, dropIndex: number) => {
         const distance = dropIndex - dragIndex;

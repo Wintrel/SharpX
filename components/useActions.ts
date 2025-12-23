@@ -150,6 +150,21 @@ export const useActions = (
         }
     };
 
+    const deleteLayer = (id: string) => {
+        if (!fabricCanvas) return;
+        // @ts-ignore
+        const obj = fabricCanvas.getObjects().find(o => o.id === id);
+        if (obj) {
+            if (fabricCanvas.getActiveObject() === obj) {
+                fabricCanvas.discardActiveObject();
+            }
+            fabricCanvas.remove(obj);
+            fabricCanvas.requestRenderAll();
+            updateLayers(fabricCanvas);
+            saveState(fabricCanvas);
+        }
+    };
+
     const duplicateSelected = async () => {
         if (!fabricCanvas) return;
         const activeObj = fabricCanvas.getActiveObject();
@@ -262,11 +277,16 @@ export const useActions = (
 
    const clear = () => {
        if (!fabricCanvas) return;
-       // CHECK: Prevent undefined errors by checking context
        if (!fabricCanvas.getContext()) return;
        
+       // FIX: Save the current background color before clearing
+       const currentBg = fabricCanvas.backgroundColor;
+       
        fabricCanvas.clear();
-       fabricCanvas.backgroundColor = '#ffffff';
+       
+       // FIX: Restore the background color instead of resetting to white
+       fabricCanvas.backgroundColor = currentBg || '#ffffff';
+       
        fabricCanvas.setViewportTransform([1, 0, 0, 1, 0, 0]); 
        fabricCanvas.renderAll();
        saveState(fabricCanvas);
@@ -280,6 +300,7 @@ export const useActions = (
        setFillMode,
        updateSelectedObject,
        deleteSelected,
+       deleteLayer,
        duplicateSelected,
        alignSelected,
        toggleLayerVisibility,

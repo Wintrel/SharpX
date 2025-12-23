@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { Canvas as FabricCanvas, Point, TEvent } from 'fabric';
+import { Canvas as FabricCanvas, Point, TEvent, Textbox } from 'fabric';
 import { Tool } from './types';
+import { generateId } from './utils';
+
+// Matching keys from useHistory
+const JSON_KEYS = [
+    'id', 'selectable', 'evented', 
+    'lockMovementX', 'lockMovementY', 
+    'lockRotation', 'lockScalingX', 'lockScalingY',
+    'viewportTransform',
+    'lockUniScaling'
+];
 
 interface UseCanvasInitProps {
     containerRef: React.RefObject<HTMLDivElement | null>;
@@ -44,17 +54,37 @@ export const useCanvasInit = ({
         setFabricCanvas(canvas);
 
         if (initialData) {
-            canvas.loadFromJSON(initialData, () => {
+            canvas.loadFromJSON(initialData).then(() => {
+                if (initialData.viewportTransform) {
+                    canvas.setViewportTransform(initialData.viewportTransform);
+                }
+                
+                // Ensure IDs exist
+                canvas.forEachObject((obj) => {
+                    // @ts-ignore
+                    if (!obj.id) {
+                        // @ts-ignore
+                        obj.id = generateId(obj.type, canvas);
+                    }
+                    if (obj.type === 'textbox') {
+                        obj.set('lockUniScaling', true);
+                    }
+                });
+
                 canvas.renderAll();
-                const initialJson = JSON.stringify(canvas.toJSON());
-                setHistory([initialJson]);
+                
+                const initialObj = (canvas as any).toJSON(JSON_KEYS);
+                if (canvas.viewportTransform) initialObj.viewportTransform = canvas.viewportTransform;
+                
+                setHistory([JSON.stringify(initialObj)]);
                 updateLayers(canvas);
             });
         } else {
-            setHistory([JSON.stringify(canvas.toJSON())]);
+            const initialObj = (canvas as any).toJSON(JSON_KEYS);
+            if (canvas.viewportTransform) initialObj.viewportTransform = canvas.viewportTransform;
+            setHistory([JSON.stringify(initialObj)]);
         }
 
-        // Cleanup
         return () => {
             canvas.dispose();
         }
@@ -78,12 +108,27 @@ export const useCanvasInit = ({
            if (onSelectionChange) onSelectionChange(obj);
        };
        
-       const handleChange = () => { 
+       const handleChange = (e?: any) => { 
+           // Normalize Text Scaling
+           const obj = e?.target;
+           if (obj && obj.type === 'textbox') {
+                const scaleX = obj.scaleX || 1;
+                const scaleY = obj.scaleY || 1;
+                if (Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001) {
+                    const maxScale = Math.max(scaleX, scaleY);
+                    obj.set({
+                        fontSize: (obj.fontSize || 20) * maxScale,
+                        width: (obj.width || 0) * scaleX, 
+                        scaleX: 1,
+                        scaleY: 1
+                    });
+                    obj.setCoords();
+                }
+           }
            saveState(fabricCanvas); 
            updateLayers(fabricCanvas); 
        };
 
-        // Attach listeners
         window.addEventListener('resize', handleResize);
         fabricCanvas.on('selection:created', handleSelection);
         fabricCanvas.on('selection:updated', handleSelection);
@@ -120,9 +165,17 @@ export const useCanvasInit = ({
         // Pan Logic Down
         fabricCanvas.on('mouse:down', (opt) => {
             const evt = opt.e;
-            if (selectedTool === 'hand' || (evt as MouseEvent).buttons === 4) {
+            const isMiddleClick = (evt as MouseEvent).button === 1;
+
+            if (selectedTool === 'hand' || isMiddleClick || (evt as MouseEvent).buttons === 4) {
+                if (isMiddleClick) {
+                    evt.preventDefault();
+                    evt.stopPropagation();
+                }
+                
                 isPanning.current = true;
-                fabricCanvas.selection = false;
+                fabricCanvas.selection = false; 
+                
                 const clientX = (evt as MouseEvent).clientX || (evt as TouchEvent).touches?.[0]?.clientX || 0;
                 const clientY = (evt as MouseEvent).clientY || (evt as TouchEvent).touches?.[0]?.clientY || 0;
                 lastPosX.current = clientX;
@@ -150,8 +203,15 @@ export const useCanvasInit = ({
 
         // Pan Logic Up
         fabricCanvas.on('mouse:up', () => {
+            if (isPanning.current) {
+                saveState(fabricCanvas);
+            }
             isPanning.current = false;
+            if (selectedTool === 'select') fabricCanvas.selection = true;
+            
             if (selectedTool === 'hand') fabricCanvas.defaultCursor = 'grab';
+            else if (selectedTool === 'select') fabricCanvas.defaultCursor = 'default';
+            else fabricCanvas.defaultCursor = 'crosshair';
         });
 
         return () => {
@@ -170,7 +230,6 @@ export const useCanvasInit = ({
         }
     }, [fabricCanvas, selectedTool, saveState, updateLayers, onSelectionChange, containerRef]);
 
-    // Handle Tool Cursors and Selectability
     useEffect(() => {
         if (!fabricCanvas) return;
         fabricCanvas.selection = selectedTool === 'select';

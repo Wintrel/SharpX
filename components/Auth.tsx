@@ -6,23 +6,57 @@ export const Auth = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    
+    // UI States
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [shake, setShake] = useState(false);
+
+    const triggerShake = () => {
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+    };
+
+    const getFriendlyErrorMessage = (errorCode: string) => {
+        switch (errorCode) {
+            case 'auth/invalid-credential':
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+                return isLogin 
+                    ? "We couldn't find an account with those details. Check your email or Sign Up."
+                    : "Invalid details provided.";
+            case 'auth/email-already-in-use':
+                return "This email is already registered. Please Log In instead.";
+            case 'auth/invalid-email':
+                return "Please enter a valid email address.";
+            case 'auth/weak-password':
+                return "Password is too weak. It should be at least 6 characters.";
+            case 'auth/too-many-requests':
+                return "Too many failed attempts. Please try again later.";
+            case 'auth/network-request-failed':
+                return "Network error. Please check your connection.";
+            default:
+                return "Authentication failed. Please try again.";
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
+        
         try {
             if (isLogin) {
                 await loginWithEmail(email, password);
             } else {
                 await registerWithEmail(email, password);
             }
+            // Success! The main app listener will handle the transition.
         } catch (err: any) {
-            setError(err.message || 'Authentication failed');
-        } finally {
             setLoading(false);
+            console.error("Auth Error Code:", err.code);
+            setError(getFriendlyErrorMessage(err.code));
+            triggerShake();
         }
     };
 
@@ -32,34 +66,47 @@ export const Auth = () => {
         try {
             await loginWithGoogle();
         } catch (err: any) {
-            setError(err.message || 'Google login failed');
+            setError(getFriendlyErrorMessage(err.code));
             setLoading(false);
+            triggerShake();
         }
+    };
+
+    const toggleMode = () => {
+        setIsLogin(!isLogin);
+        setError(null);
+        setShake(false);
     };
 
     return (
         <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-zinc-950 text-white selection:bg-blue-500/30">
-            {/* Background Ambience - Vital for Glassmorphism */}
-            <div className="absolute inset-0 w-full h-full">
+            {/* Background Ambience */}
+            <div className="absolute inset-0 w-full h-full pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/20 blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-violet-600/20 blur-[120px] animate-pulse" style={{ animationDuration: '7s' }} />
                 <div className="absolute top-[40%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[30%] h-[30%] rounded-full bg-indigo-500/10 blur-[100px]" />
-                
-                {/* Grid Pattern overlay for texture */}
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,black,transparent)]" />
             </div>
 
             {/* Glass Card */}
-            <div className="relative w-full max-w-md mx-4">
+            <div className={`relative w-full max-w-md mx-4 transition-transform duration-300 ${shake ? 'translate-x-[-10px] animate-shake' : ''}`}>
+                <style jsx>{`
+                    @keyframes shake {
+                        0%, 100% { transform: translateX(0); }
+                        25% { transform: translateX(-5px); }
+                        75% { transform: translateX(5px); }
+                    }
+                    .animate-shake { animation: shake 0.3s ease-in-out; }
+                `}</style>
+
                 {/* Glow behind card */}
                 <div className="absolute -inset-1 bg-gradient-to-b from-blue-500/20 to-violet-500/20 rounded-3xl blur-xl opacity-50" />
                 
                 <div className="relative bg-zinc-900/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl p-8 sm:p-10 overflow-hidden">
-                    {/* Glossy reflection effect at top */}
                     <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
                     {/* Header */}
-                    <div className="flex flex-col items-center text-center space-y-4 mb-10">
+                    <div className="flex flex-col items-center text-center space-y-4 mb-8">
                         <div className="p-3 bg-gradient-to-br from-blue-500 to-violet-600 rounded-2xl shadow-lg shadow-blue-500/20 ring-1 ring-white/20">
                             <LayoutGrid size={28} className="text-white" />
                         </div>
@@ -73,9 +120,9 @@ export const Auth = () => {
                         </div>
                     </div>
 
-                    {/* Error Alert */}
+                    {/* Feedback Messages */}
                     {error && (
-                        <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-200 text-sm animate-in fade-in slide-in-from-top-2">
+                        <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-200 text-sm animate-in fade-in slide-in-from-top-2 shadow-inner">
                             <AlertCircle size={18} className="shrink-0 mt-0.5" />
                             <span>{error}</span>
                         </div>
@@ -150,7 +197,7 @@ export const Auth = () => {
                         <p className="text-zinc-400 text-sm">
                             {isLogin ? "Don't have an account? " : "Already have an account? "}
                             <button 
-                                onClick={() => setIsLogin(!isLogin)} 
+                                onClick={toggleMode} 
                                 className="text-blue-400 hover:text-blue-300 font-semibold hover:underline transition-colors ml-1"
                             >
                                 {isLogin ? 'Sign up' : 'Log in'}

@@ -20,6 +20,7 @@ export interface CanvasHandle {
     addText: (text?: string) => void;
     addImage: (file: File) => void;
     deleteSelected: () => void;
+    deleteLayer: (id: string) => void;
     duplicateSelected: () => void;
     alignSelected: (alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
     undo: () => void;

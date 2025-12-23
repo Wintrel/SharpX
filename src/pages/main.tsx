@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { LogOut, Loader2 } from 'lucide-react';
+import { Settings, Loader2, User as UserIcon } from 'lucide-react';
 
 // Adjust these imports based on your actual file structure
 import NoSSR from '../../components/noSSR';
 import { Canvas as Whiteboard } from '../../components/Canvas';
 import Reductor from './reductor';
 import { Auth } from '../../components/Auth';
+import { AccountSettings } from '../../components/AccountSettings'; 
 import { 
     auth, 
     logout, 
@@ -20,28 +21,29 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [initialData, setInitialData] = useState<any>(null);
   
-  // Transition State
+  // UI States
   const [showAuth, setShowAuth] = useState(false);
   const [showCanvas, setShowCanvas] = useState(false);
+  const [showSettings, setShowSettings] = useState(false); 
 
   // 1. Auth Listener & Data Fetching
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
         if (currentUser) {
-            // Logged In: Fade out Auth, Load Data, Fade in Canvas
+            // Logged In
             const data = await loadCanvasData(currentUser.uid);
             setInitialData(data || null);
             setUser(currentUser);
             
             setShowAuth(false);
-            // Small delay to allow Auth to fade out before showing Canvas
             setTimeout(() => {
                 setLoading(false);
                 setShowCanvas(true);
             }, 600); 
         } else {
-            // Logged Out: Fade out Canvas, Fade in Auth
+            // Logged Out
             setShowCanvas(false);
+            setShowSettings(false); 
             setTimeout(() => {
                 setUser(null);
                 setInitialData(null);
@@ -60,13 +62,19 @@ export default function Home() {
       }
   };
 
+  const handleLogout = async () => {
+    setShowCanvas(false); 
+    setShowSettings(false);
+    setTimeout(async () => {
+        await logout(); 
+    }, 500);
+  };
+
   return (
     <NoSSR>
       <div className="relative w-full h-screen overflow-hidden bg-zinc-950 text-white selection:bg-blue-500/30">
           
-          {/* --- PERSISTENT BACKGROUND --- 
-              This stays visible during the transition between Auth and Canvas,
-              creating that "fitting" continuous flow. */}
+          {/* --- PERSISTENT BACKGROUND --- */}
           <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/20 blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-violet-600/20 blur-[120px] animate-pulse" style={{ animationDuration: '7s' }} />
@@ -74,8 +82,7 @@ export default function Home() {
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,black,transparent)]" />
           </div>
 
-          {/* --- LOADING OVERLAY --- 
-              Glassmorphic loader for initial check */}
+          {/* --- LOADING OVERLAY --- */}
           {loading && !user && !showAuth && (
              <div className="absolute inset-0 flex items-center justify-center z-[100]">
                 <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 animate-in fade-in duration-500">
@@ -98,29 +105,35 @@ export default function Home() {
           >
               {user && (
                 <>
-                    {/* Glassy Logout Button */}
+                    {/* Settings / Account Button */}
                     <div className="fixed top-6 left-24 z-[60] animate-in fade-in slide-in-from-top-4 duration-700 delay-300">
                         <button 
-                            onClick={async () => {
-                                setShowCanvas(false); 
-                                setTimeout(async () => {
-                                    await logout(); 
-                                }, 500);
-                            }} 
-                            title="Sign Out"
+                            onClick={() => setShowSettings(true)}
+                            title="Account Settings"
                             className="group relative w-12 h-12 flex items-center justify-center rounded-full 
                                      bg-zinc-900/30 backdrop-blur-md border border-white/10 shadow-lg 
-                                     hover:bg-red-500/10 hover:border-red-500/30 hover:shadow-red-500/20 
-                                     transition-all duration-300 active:scale-95"
+                                     hover:bg-blue-500/10 hover:border-blue-500/30 hover:shadow-blue-500/20 
+                                     transition-all duration-300 active:scale-95 overflow-hidden"
                         >
-                            <LogOut size={18} className="text-zinc-400 group-hover:text-red-400 transition-colors" />
+                            {/* Always use letter avatar on gradient background */}
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-600 to-violet-600 group-hover:from-blue-500 group-hover:to-violet-500 transition-all">
+                                <span className="text-lg font-bold text-white drop-shadow-md">
+                                    {user.email?.charAt(0).toUpperCase() || 'U'}
+                                </span>
+                            </div>
                             
-                            {/* Tooltip */}
-                            <span className="absolute left-full ml-3 px-2 py-1 bg-zinc-900/90 text-zinc-300 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-white/5">
-                                Sign Out
-                            </span>
+                            {/* Status Indicator */}
+                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-zinc-900 shadow-sm z-10" />
                         </button>
                     </div>
+
+                    {/* Account Settings Overlay */}
+                    <AccountSettings 
+                        user={user} 
+                        isOpen={showSettings} 
+                        onClose={() => setShowSettings(false)}
+                        onLogout={handleLogout}
+                    />
 
                     <Reductor whiteboardRef={whiteboardRef}>
                         <Whiteboard 

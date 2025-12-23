@@ -25,7 +25,7 @@ interface PropertiesPanelProps {
     onSetActiveColorTarget: (target: 'background' | 'fill' | 'gradientStart' | 'gradientEnd') => void;
     onHslChange: (field: any, val: number) => void;
     onHexChange: (e: any) => void;
-    onLayerAction: (id: string, action: 'visible'|'locked') => void;
+    onLayerAction: (id: string, action: 'visible'|'locked'|'delete') => void;
     onLayerDragDrop: (dragIndex: number, dropIndex: number) => void;
     onPropertyChange: (prop: string, val: any) => void;
     onGlobalAction: (action: string) => void;
@@ -44,7 +44,6 @@ interface PropertiesPanelProps {
 const panelBaseClasses = "fixed bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl p-4 z-50 transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1)";
 const fabBaseClasses = "w-12 h-12 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 rounded-full shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 flex items-center justify-center border border-zinc-100 dark:border-zinc-700 z-40 transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1)";
 
-// --- NEW STYLES FOR BETTER VISIBILITY ---
 const secondaryBtnClass = "flex items-center justify-center p-2 rounded-lg bg-zinc-200/50 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300/50 dark:hover:bg-zinc-700 hover:border-zinc-300 transition-all shadow-sm";
 const activeToggleBtnClass = "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm ring-1 ring-black/5 font-bold";
 const inactiveToggleBtnClass = "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50";
@@ -58,7 +57,6 @@ export const PropertiesPanel = (props: PropertiesPanelProps) => {
         setShowColorPicker(true);
     };
 
-    // --- Drag Logic ---
     const handleDragStart = (e: React.DragEvent, index: number) => {
         setDraggedLayerIndex(index);
         e.dataTransfer.effectAllowed = "move";
@@ -100,7 +98,6 @@ export const PropertiesPanel = (props: PropertiesPanelProps) => {
                 <div className="relative max-h-[calc(100vh-200px)] overflow-y-auto custom-scrollbar">
                     {!props.isShapeSelected ? (
                         <div className="space-y-6 p-1 animate-in fade-in">
-                            {/* Canvas Background */}
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase">
                                     <div className="flex items-center gap-2"><Palette size={12} /><span>Background</span></div>
@@ -123,7 +120,6 @@ export const PropertiesPanel = (props: PropertiesPanelProps) => {
                                 )}
                             </div>
 
-                            {/* Layers */}
                             <div className="space-y-3 pt-4 border-t border-zinc-200/60 dark:border-zinc-700">
                                 <div className="flex items-center justify-between text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase">
                                     <div className="flex items-center gap-2"><Layers size={12} /><span>Layers</span></div>
@@ -147,6 +143,8 @@ export const PropertiesPanel = (props: PropertiesPanelProps) => {
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button onClick={(e) => { e.stopPropagation(); props.onLayerAction(layer.id, 'locked'); }} className="p-1.5 rounded hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800">{layer.locked ? <Lock size={12} /> : <Unlock size={12} />}</button>
                                                 <button onClick={(e) => { e.stopPropagation(); props.onLayerAction(layer.id, 'visible'); }} className="p-1.5 rounded hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800">{layer.visible ? <Eye size={12} /> : <EyeOff size={12} />}</button>
+                                                {/* NEW: Delete Button */}
+                                                <button onClick={(e) => { e.stopPropagation(); props.onLayerAction(layer.id, 'delete'); }} className="p-1.5 rounded hover:bg-red-100 text-zinc-500 hover:text-red-600 transition-colors"><Trash2 size={12} /></button>
                                             </div>
                                         </div>
                                     ))}
@@ -159,7 +157,6 @@ export const PropertiesPanel = (props: PropertiesPanelProps) => {
                                 <div className="flex items-center gap-2"><Square size={16} className="text-blue-600 dark:text-blue-400" /><span className="text-sm font-bold text-zinc-800 dark:text-zinc-200 uppercase">{props.selectedObject?.type || "Shape"}</span></div>
                             </div>
 
-                            {/* Alignment */}
                             <div className="space-y-2">
                                 <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase">Align</span>
                                 <div className="grid grid-cols-6 gap-1.5">
@@ -171,7 +168,6 @@ export const PropertiesPanel = (props: PropertiesPanelProps) => {
                                 </div>
                             </div>
 
-                            {/* Fill Section */}
                             <div className="space-y-2">
                                 <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 uppercase">Fill</span>
                                 <div className="flex bg-zinc-200/50 dark:bg-zinc-800 p-1 rounded-lg gap-1">
@@ -183,7 +179,6 @@ export const PropertiesPanel = (props: PropertiesPanelProps) => {
                                 </div>
                             </div>
 
-                            {/* Fill Context */}
                             {props.fillMode === 'solid' && (
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 cursor-pointer hover:border-zinc-300 transition-colors" onClick={() => openColorPicker('fill')}>
@@ -197,7 +192,6 @@ export const PropertiesPanel = (props: PropertiesPanelProps) => {
                                 </div>
                             )}
 
-                            {/* Gradient Context */}
                             {props.fillMode === 'gradient' && (
                                 <div className="space-y-3">
                                     <div className="flex gap-2">
@@ -216,7 +210,6 @@ export const PropertiesPanel = (props: PropertiesPanelProps) => {
                                 </div>
                             )}
 
-                            {/* Image Context */}
                             {props.fillMode === 'image' && (
                                 <div className="space-y-3">
                                     <div className="flex gap-2 p-1 bg-zinc-200/50 rounded-lg">
@@ -232,7 +225,6 @@ export const PropertiesPanel = (props: PropertiesPanelProps) => {
                                 </div>
                             )}
 
-                            {/* Properties (Stroke, Opacity, Typography) */}
                             <div className="space-y-5 pt-4 border-t border-zinc-200/60 dark:border-zinc-700">
                                 <PropertySlider label="Opacity" value={props.opacity} onChange={(val) => props.onPropertyChange('opacity', val)} unit="%" />
                                 {props.selectedObject?.type === 'textbox' ? (
@@ -259,7 +251,6 @@ export const PropertiesPanel = (props: PropertiesPanelProps) => {
                                 )}
                             </div>
 
-                            {/* Actions */}
                             <div className="grid grid-cols-2 gap-2 pt-4 border-t border-zinc-200/60 dark:border-zinc-700 pb-2">
                                 <button onClick={() => props.onGlobalAction('duplicate')} className={`${secondaryBtnClass} font-bold text-xs bg-zinc-100 border-zinc-200 hover:bg-zinc-200`}><Copy size={14} className="mr-2" /> Duplicate</button>
                                 <button onClick={() => props.onGlobalAction('delete')} className="flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-all shadow-sm"><Trash2 size={14} /> Delete</button>
