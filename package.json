@@ -9,12 +9,20 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "next": "16.0.7",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "fabric": "^6.9.1",
+    "firebase": "^12.7.0",
+    "konva": "^10.0.12",
+    "lucide": "^0.561.0",
+    "lucide-react": "^0.561.0",
+    "next": "^16.0.10",
+    "react": "^19.2.0",
+    "react-colorful": "^5.6.1",
+    "react-dom": "19.2.0",
+    "react-konva": "^19.2.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/fabric": "^5.3.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
